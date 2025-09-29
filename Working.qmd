@@ -1,0 +1,11 @@
+---
+title: "EDA WORK"
+format: 
+  pdf:
+    fig-height: 4
+    fig-width: 6
+---
+
+
+
+
