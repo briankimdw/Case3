@@ -5,7 +5,345 @@ format:
     fig-height: 4
     fig-width: 6
 ---
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+```
+
+Move amb 4 from south to north - Sonya
+-when we move from south to north
 
 
+```{r}
+load("emsData.RData")
+```
+
+
+```{r}
+
+#don't remove central, fix this.
+#we are assuming that we are only looking at causes in south and north then
+
+#this is why i removed central because this option means that is separate
+x |>
+  select(eTT.BG.So, eTT.BG.NN, eTT.BG.FN, REF.GRID) |> 
+  filter(REF.GRID != "2 Central") |>
+  select(-REF.GRID) |>
+  pivot_longer(cols = everything(),
+               names_to = "source",
+               values_to = "value") |> 
+  ggplot(aes(x = source, y = value)) +
+  geom_boxplot() +
+  labs(
+    x = "Source",
+    y = "eTT.BG Value",
+    title = "Distribution of eTT.BG by Source"
+  ) +
+  theme_minimal()
+
+```
+
+we lose something though. if we have something there, we lose something. We somehow end up putting it below hand. 
+
+```{r}
+
+time = cbind(x$eTT.BG.NN, x$eTT.BG.FN, x$eTT.BG.So)
+
+
+x %>%
+  select(eTT.BG.NN, eTT.BG.FN, eTT.BG.So) %>%
+  pivot_longer(cols = everything(),
+               names_to = "source",
+               values_to = "time") %>%
+  ggplot(aes(x = time, color = source)) +
+  geom_density(linewidth = 1.2) +
+  labs(
+    x = "Time",
+    y = "Density",
+    title = "Distribution of eTT.BG Values (All Sources)"
+  ) +
+  theme_minimal()
+
+
+```
+
+
+```{r}
+x %>%
+  filter(REF.GRID != "2 CENTRAL") %>%
+  select(eTT.BG.NN, eTT.BG.FN, eTT.BG.So) %>%
+  pivot_longer(cols = everything(),
+               names_to = "source",
+               values_to = "time") %>%
+  ggplot(aes(x = time, color = source)) +
+  geom_density(linewidth = 1.2) +
+  labs(
+    x = "Time",
+    y = "Density",
+    title = "Distribution of eTT.BG Values (All Sources)"
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+
+x %>%
+  filter(REF.GRID != "2 Central") %>%
+  mutate(REF.GRID = as.factor(REF.GRID)) %>%
+  pivot_longer(
+    cols = c(eTT.BG.NN, eTT.BG.FN, eTT.BG.So),  # pivot only numeric time columns
+    names_to = "source",
+    values_to = "time"
+  ) %>%
+  ggplot(aes(x = time, color = source)) +
+  geom_density(linewidth = 1.2) +
+  labs(
+    x = "Time",
+    y = "Density",
+    title = "Distribution of eTT.BG Values (All Sources)"
+  ) +
+  theme_minimal() +
+  facet_wrap(~REF.GRID)
+```
+
+
+Quantify this, make it into words
+
+## Mixed Effect
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+x_long <- x %>%
+  pivot_longer(
+    cols = c(starts_with("Dist."), starts_with("eTT.")),
+    names_to = c(".value", "Destination"),
+    names_pattern = "(.*)\\.(So|Ce|NN|FN)$"
+  )
+
+```
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+x_expanded <- x %>%
+  # create a unique ID per original row
+  mutate(CallID = row_number()) %>%
+  
+  # repeat rows for 5 scenarios
+  tidyr::uncount(weights = 5, .id = "scenario_id") %>%
+  mutate(
+    Scenario = paste0("S", scenario_id - 1),
+    
+    # extract call location from REF.GRID
+    CallLoc = str_extract(REF.GRID, "(South|Central|North)"),
+    # normalize to codes
+    CallLocCode = case_when(
+      CallLoc == "South"   ~ "So",
+      CallLoc == "Central" ~ "Ce",
+      CallLoc == "North"   ~ "NN"  # treat all "North" as "NN"
+    ),
+    
+    # dispatch rules
+    Dispatch = case_when(
+      # S0
+      Scenario == "S0" & CallLocCode == "NN" ~ "Ce",
+      Scenario == "S0" & CallLocCode == "Ce" ~ "Ce",
+      Scenario == "S0" & CallLocCode == "So" ~ "So",
+      
+      # S1
+      Scenario == "S1" & CallLocCode == "NN" ~ "NN",
+      Scenario == "S1" & CallLocCode == "Ce" ~ "Ce",
+      Scenario == "S1" & CallLocCode == "So" ~ "Ce",
+      
+      # S2
+      Scenario == "S2" & CallLocCode == "NN" ~ "FN",
+      Scenario == "S2" & CallLocCode == "Ce" ~ "Ce",
+      Scenario == "S2" & CallLocCode == "So" ~ "Ce",
+      
+      # S3
+      Scenario == "S3" & CallLocCode == "NN" ~ "NN",
+      Scenario == "S3" & CallLocCode == "Ce" ~ "Ce",
+      Scenario == "S3" & CallLocCode == "So" ~ "So",
+      
+      # S4
+      Scenario == "S4" & CallLocCode == "NN" ~ "FN",
+      Scenario == "S4" & CallLocCode == "Ce" ~ "Ce",
+      Scenario == "S4" & CallLocCode == "So" ~ "So"
+    ),
+    
+    # pick the correct estimated travel time
+    EstTravelTime = case_when(
+      Dispatch == "So" ~ eTT.BG.So,
+      Dispatch == "Ce" ~ eTT.BG.Ce,
+      Dispatch == "NN" ~ eTT.BG.NN,
+      Dispatch == "FN" ~ eTT.BG.FN
+    )
+  ) %>%
+  select(-scenario_id)
+
+
+```
+
+```{r}
+library(lme4)
+library(broom.mixed)
+library(ggplot2)
+library(dplyr)
+
+# Store formula as a string for annotation
+formula_latex <- "EstTravelTime ~ Scenario + (1 | CallID)"
+
+# Fit the model
+m <- lmer(EstTravelTime ~ Scenario + (1 | CallID), data = x_expanded)
+
+# Extract fixed effects, exclude intercept
+coefs <- broom.mixed::tidy(m, effects = "fixed", conf.int = TRUE) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(Significant = !(conf.low <= 0 & conf.high >= 0))
+
+# Plot
+ggplot(coefs, aes(x = term, y = estimate, color = Significant)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
+  scale_color_manual(values = c("grey60", "steelblue")) +
+  coord_flip() +
+  labs(x = "", y = "Coefficient estimate",
+       title = "Fixed effects (significant ones highlighted)") +
+  theme_minimal()
+  # Add the formula as text on the plot (top right)
+
+```
+
+
+```{r}
+yo <- x |>
+  filter(REF.GRID == "3 South")
+
+library(dplyr)
+library(lubridate)
+
+# Assuming your data is called df
+# Convert columns to POSIXct
+df <- yo %>%
+  mutate(
+    DT.DISP = ymd_hms(DT.DISP),
+    DT.ENROUTE = ymd_hms(DT.ENROUTE),
+    DT.AVAILABLE = ymd_hms(DT.AVAILABLE)
+  )
+
+# Find conflicts where AVAILABLE is after DISP
+conflicts <- df %>%
+  filter(DT.AVAILABLE > DT.DISP)
+
+# View conflicts
+print(conflicts)
+
+```
+```{r}
+library(dplyr)
+library(lubridate)
+
+conflicts <- df %>%
+  filter(DT.AVAILABLE > DT.DISP) %>%
+  mutate(
+    conflict_minutes = as.numeric(difftime(DT.AVAILABLE, DT.DISP, units = "mins"))
+  )
+
+library(ggplot2)
+
+ggplot(conflicts, aes(x = conflict_minutes)) +
+  geom_histogram(binwidth = 5, fill = "steelblue", color = "white") +
+  labs(title = "Conflict Duration Distribution",
+       x = "Conflict Duration (minutes)",
+       y = "Count") +
+  theme_minimal()
+
+
+```
+
+```{r}
+ro <- x |>
+  filter(REF.GRID != "3 South")
+
+library(dplyr)
+library(lubridate)
+
+# Assuming your data is called df
+# Convert columns to POSIXct
+df2 <- ro %>%
+  mutate(
+    DT.DISP = ymd_hms(DT.DISP),
+    DT.ENROUTE = ymd_hms(DT.ENROUTE),
+    DT.AVAILABLE = ymd_hms(DT.AVAILABLE)
+  )
+
+conflicts <- df2 %>%
+  filter(DT.AVAILABLE > DT.DISP) %>%
+  mutate(
+    conflict_minutes = as.numeric(difftime(DT.AVAILABLE, DT.DISP, units = "mins"))
+  )
+  
+if (!requireNamespace("IRanges", quietly = TRUE)) {
+  install.packages("BiocManager")
+  BiocManager::install("IRanges")
+}
+library(IRanges)
+library(dplyr)
+library(lubridate)
+library(IRanges)
+
+# Assume conflicts already has DT.DISP and DT.AVAILABLE
+intervals <- IRanges(start = as.numeric(conflicts$DT.DISP),
+                     end = as.numeric(conflicts$DT.AVAILABLE))
+
+# Count how many intervals overlap at each start
+overlap_counts <- countOverlaps(intervals, intervals)
+
+# Filter rows where there are at least 3 overlapping intervals
+conflicts_3plus <- conflicts[overlap_counts >= 3, ]
+
+```
+
+
+
+
+```{r}
+
+# Add overlap info to dataframe
+conflicts <- conflicts %>%
+  mutate(overlap_count = overlap_counts,
+         overlap_level = ifelse(overlap_count >= 3, "3+ conflicts", "1-2 conflicts"))
+
+ggplot(conflicts, aes(x = DT.DISP, xend = DT.AVAILABLE, y = 1, yend = 1, color = overlap_level)) +
+  geom_segment(size = 3) +
+  scale_color_manual(values = c("1-2 conflicts" = "blue", "3+ conflicts" = "red")) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  labs(title = "Timeline of Load Conflicts",
+       x = "Time",
+       color = "Conflict Level") +
+  theme_minimal() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+
+```
+
+```{r}
+
+ggplot(conflicts, aes(x = conflict_minutes)) +
+  geom_histogram(binwidth = 5, fill = "steelblue", color = "white") +
+  labs(title = "Conflict Duration Distribution",
+       x = "Conflict Duration (minutes)",
+       y = "Count") +
+  theme_minimal()
+```
 
 
