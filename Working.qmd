@@ -5,20 +5,18 @@ format:
     fig-height: 4
     fig-width: 6
 ---
+
 ```{r}
 library(dplyr)
 library(ggplot2)
 library(tidyr)
 ```
 
-Move amb 4 from south to north - Sonya
--when we move from south to north
-
+Move amb 4 from south to north - Sonya -when we move from south to north
 
 ```{r}
 load("emsData.RData")
 ```
-
 
 ```{r}
 
@@ -44,7 +42,7 @@ x |>
 
 ```
 
-we lose something though. if we have something there, we lose something. We somehow end up putting it below hand. 
+we lose something though. if we have something there, we lose something. We somehow end up putting it below hand.
 
 ```{r}
 
@@ -68,7 +66,6 @@ x %>%
 
 ```
 
-
 ```{r}
 x %>%
   filter(REF.GRID != "2 CENTRAL") %>%
@@ -85,7 +82,6 @@ x %>%
   ) +
   theme_minimal()
 ```
-
 
 ```{r}
 
@@ -108,7 +104,6 @@ x %>%
   facet_wrap(~REF.GRID)
 ```
 
-
 Quantify this, make it into words
 
 ## Mixed Effect
@@ -125,7 +120,6 @@ x_long <- x %>%
   )
 
 ```
-
 
 ```{r}
 library(dplyr)
@@ -221,7 +215,6 @@ ggplot(coefs, aes(x = term, y = estimate, color = Significant)) +
 
 ```
 
-
 ```{r}
 yo <- x |>
   filter(REF.GRID == "3 South")
@@ -246,6 +239,7 @@ conflicts <- df %>%
 print(conflicts)
 
 ```
+
 ```{r}
 library(dplyr)
 library(lubridate)
@@ -311,9 +305,6 @@ conflicts_3plus <- conflicts[overlap_counts >= 3, ]
 
 ```
 
-
-
-
 ```{r}
 
 # Add overlap info to dataframe
@@ -345,5 +336,32 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
        y = "Count") +
   theme_minimal()
 ```
+
+
+
+```{r}
+df_rushHour <- df %>%
+  mutate(
+    disp_hour = hour(DT.DISP),
+    disp_min  = minute(DT.DISP),
+    rush_hour = !is.na(DT.DISP) & (
+      
+      #morning 7:30pm - 9:30am
+      (disp_hour == 7 & disp_min >= 30) |
+      (disp_hour == 8) |
+      (disp_hour == 9 & disp_min < 30) |
+      
+      #evening 4:00pm - 6:30pm
+      (disp_hour == 16) |
+      (disp_hour == 17) |
+      (disp_hour == 18 & disp_min < 30)
+    ),
+    # 1 if rush hour 0 else
+    rush_hour_ind = as.integer(rush_hour)  
+  ) %>%
+  select(-disp_hour, -disp_min)
+```
+
+
 
 
