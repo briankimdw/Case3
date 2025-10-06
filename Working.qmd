@@ -43,6 +43,36 @@ x |>
 ```
 
 we lose something though. if we have something there, we lose something. We somehow end up putting it below hand.
+```{r}
+library(lubridate)
+
+x<- x %>%
+  mutate(
+    disp_hour = hour(DT.DISP),
+    disp_min  = minute(DT.DISP),
+    rush_hour = !is.na(DT.DISP) & (
+      
+      #morning 7:30pm - 9:30am
+      (disp_hour == 7 & disp_min >= 30) |
+      (disp_hour == 8) |
+      (disp_hour == 9 & disp_min < 30) |
+      
+      #evening 4:00pm - 6:30pm
+      (disp_hour == 16) |
+      (disp_hour == 17) |
+      (disp_hour == 18 & disp_min < 30)
+    ),
+    # 1 if rush hour 0 else
+    rush_hour_ind = as.integer(rush_hour)  
+  ) %>%
+  select(-disp_hour, -disp_min)
+```
+
+
+
+
+
+
 
 ```{r}
 
@@ -237,8 +267,86 @@ ggplot(x_expanded, aes(x = DISPATCH.PRIORITY.NAME, y = resid)) +
        title = "Residuals by Dispatch Priority")
 ```
 
+```{r}
+library(nlme)
+
+x_clean <- x_expanded %>%
+  filter(!is.na(EstTravelTime),
+         !is.na(Scenario),
+         !is.na(REC.LON),
+         !is.na(REC.LAT))
+# Simple lme with residual variance as function of lon/lat
+m2 <- lme(EstTravelTime ~ Scenario,
+             random = ~1 | CallID,
+             weights = varFixed(~ REC.LON + REC.LAT),
+             data = x_clean,
+             method = "REML")
+
+```
 
 
+```{r}
+resid_m <- residuals(m2, type = "normalized")
+
+# Residuals vs predicted
+plot(fitted(m2), resid_m, main="Residuals vs Fitted")
+abline(h=0, col="red")
+
+# Residuals vs coordinates
+plot(x_clean$REC.LON, resid_m, main="Residuals vs Longitude")
+plot(x_clean$REC.LAT, resid_m, main="Residuals vs Latitude")
+
+# Histogram
+hist(resid_m, breaks=30, main="Histogram of normalized residuals")
+
+```
+
+```{r}
+library(lme4)
+
+# Suppose your spatial variable is called `SpatialID` (already discrete)
+# Original model:
+# m <- lmer(EstTravelTime ~ Scenario + (1 | CallID), data = x_clean)
+
+# Add spatial random effect:
+m_spatial <- lmer(EstTravelTime ~ Scenario + (1 | CallID) + (1 | REC.LON) +(1|REC.LAT),
+                  data = x_clean)
+
+# Examine results
+summary(m_spatial)
+
+```
+
+```{r}
+resid_m <- residuals(m_spatial)
+plot(fitted(m_spatial), resid_m)
+hist(resid_m, breaks=30)
+
+```
+
+
+```{r}
+# Combine LON and LAT into a single factor
+x_clean$SpatialID <- interaction(x_clean$REC.LON, x_clean$REC.LAT)
+
+# Fit model
+library(lme4)
+m_spatial <- lmer(EstTravelTime ~ Scenario + (1 | CallID) + (1 | SpatialID),
+                  data = x_clean)
+
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(x_clean, aes(x = SpatialID, y = resid)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Residuals by Spatial Group",
+       x = "Spatial Group",
+       y = "Residuals")
+
+```
 
 
 ```{r}
@@ -395,32 +503,6 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
        y = "Count") +
   theme_minimal()
 ```
-
-
-
-```{r}
-df_rushHour <- df %>%
-  mutate(
-    disp_hour = hour(DT.DISP),
-    disp_min  = minute(DT.DISP),
-    rush_hour = !is.na(DT.DISP) & (
-      
-      #morning 7:30pm - 9:30am
-      (disp_hour == 7 & disp_min >= 30) |
-      (disp_hour == 8) |
-      (disp_hour == 9 & disp_min < 30) |
-      
-      #evening 4:00pm - 6:30pm
-      (disp_hour == 16) |
-      (disp_hour == 17) |
-      (disp_hour == 18 & disp_min < 30)
-    ),
-    # 1 if rush hour 0 else
-    rush_hour_ind = as.integer(rush_hour)  
-  ) %>%
-  select(-disp_hour, -disp_min)
-```
-
 
 
 
