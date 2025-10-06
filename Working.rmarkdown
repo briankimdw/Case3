@@ -5,20 +5,24 @@ format:
     fig-height: 4
     fig-width: 6
 ---
+
 ```{r}
 library(dplyr)
 library(ggplot2)
 library(tidyr)
 ```
 
+
+
 Move amb 4 from south to north - Sonya
 -when we move from south to north
+
+
 
 
 ```{r}
 load("emsData.RData")
 ```
-
 
 ```{r}
 
@@ -44,7 +48,11 @@ x |>
 
 ```
 
+
+
 we lose something though. if we have something there, we lose something. We somehow end up putting it below hand. 
+
+
 
 ```{r}
 
@@ -68,7 +76,6 @@ x %>%
 
 ```
 
-
 ```{r}
 x %>%
   filter(REF.GRID != "2 CENTRAL") %>%
@@ -85,7 +92,6 @@ x %>%
   ) +
   theme_minimal()
 ```
-
 
 ```{r}
 
@@ -109,9 +115,13 @@ x %>%
 ```
 
 
+
+
 Quantify this, make it into words
 
 ## Mixed Effect
+
+
 
 ```{r}
 library(dplyr)
@@ -125,7 +135,6 @@ x_long <- x %>%
   )
 
 ```
-
 
 ```{r}
 library(dplyr)
@@ -192,7 +201,11 @@ x_expanded <- x %>%
 ```
 
 
+
+
 ## Modeling
+
+
 
 ```{r}
 library(lme4)
@@ -223,6 +236,7 @@ ggplot(coefs, aes(x = term, y = estimate, color = Significant)) +
   # Add the formula as text on the plot (top right)
 
 ```
+
 ```{r}
 # Extract fitted values and residuals
 x_expanded$fitted <- fitted(m)
@@ -242,10 +256,6 @@ ggplot(x_expanded, aes(x = DISPATCH.PRIORITY.NAME, y = resid)) +
   labs(x = "Dispatch Priority", y = "Residuals",
        title = "Residuals by Dispatch Priority")
 ```
-
-
-
-
 
 ```{r}
 library(ggplot2)
@@ -279,8 +289,6 @@ for (v in cat_vars) {
 
 ```
 
-
-
 ```{r}
 yo <- x |>
   filter(REF.GRID == "3 South")
@@ -305,8 +313,6 @@ conflicts <- df %>%
 print(conflicts)
 
 ```
-
-
 
 ```{r}
 library(dplyr)
@@ -373,9 +379,6 @@ conflicts_3plus <- conflicts[overlap_counts >= 3, ]
 
 ```
 
-
-
-
 ```{r}
 
 # Add overlap info to dataframe
@@ -407,5 +410,4 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
        y = "Count") +
   theme_minimal()
 ```
-
 
