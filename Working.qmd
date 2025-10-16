@@ -1,7 +1,7 @@
 ---
 title: "EDA WORK"
 format: 
-  pdf:
+ html:
     fig-height: 4
     fig-width: 6
 ---
@@ -282,11 +282,21 @@ m2 <- lme(EstTravelTime ~ Scenario,
              data = x_clean,
              method = "REML")
 
+
+#varident potentially. Var power and var constant power, deepdne on fitted valeus
+
 ```
 
 
+
 ```{r}
-resid_m <- residuals(m2, type = "normalized")
+m2
+```
+
+
+
+```{r}
+resid_m <- residuals(m2, type = "pearson")
 
 # Residuals vs predicted
 plot(fitted(m2), resid_m, main="Residuals vs Fitted")
@@ -329,55 +339,18 @@ hist(resid_m, breaks=30)
 # Combine LON and LAT into a single factor
 x_clean$SpatialID <- interaction(x_clean$REC.LON, x_clean$REC.LAT)
 
+x_expanded <- x_expanded %>%
+  mutate(Distance = case_when(
+    Dispatch == "So" ~ Dist.So,
+    Dispatch == "Ce" ~ Dist.Ce,
+    Dispatch == "NN" ~ Dist.NN,
+    Dispatch == "FN" ~ Dist.FN
+  ))
+
 # Fit model
 library(lme4)
 m_spatial <- lmer(EstTravelTime ~ Scenario + (1 | CallID) + (1 | SpatialID),
                   data = x_clean)
-
-```
-
-```{r}
-library(ggplot2)
-
-ggplot(x_clean, aes(x = SpatialID, y = resid)) +
-  geom_boxplot() +
-  theme_minimal() +
-  labs(title = "Residuals by Spatial Group",
-       x = "Spatial Group",
-       y = "Residuals")
-
-```
-
-
-```{r}
-library(ggplot2)
-
-x_expanded$resid <- resid(m)
-
-## Numeric covariates
-num_vars <- names(x_expanded)[sapply(x_expanded, is.numeric)]
-num_vars <- setdiff(num_vars, c("EstTravelTime", "fitted", "resid", "CallID"))
-
-for (v in num_vars) {
-  print(
-    ggplot(x_expanded, aes_string(x = v, y = "resid")) +
-      geom_point(alpha = 0.4) +
-      geom_smooth(se = FALSE, color = "red") +
-      labs(title = paste("Residuals vs", v))
-  )
-}
-
-## Categorical covariates
-cat_vars <- names(x_expanded)[sapply(x_expanded, function(x) is.factor(x) || is.character(x))]
-
-for (v in cat_vars) {
-  print(
-    ggplot(x_expanded, aes_string(x = v, y = "resid")) +
-      geom_boxplot() +
-      labs(title = paste("Residuals by", v))
-  )
-}
-
 
 ```
 
@@ -505,4 +478,278 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
 ```
 
 
+
+
+```{r}
+# Fit the model
+
+x_expanded <- x_expanded %>%
+  mutate(Distance = case_when(
+    Dispatch == "So" ~ Dist.So,
+    Dispatch == "Ce" ~ Dist.Ce,
+    Dispatch == "NN" ~ Dist.NN,
+    Dispatch == "FN" ~ Dist.FN
+  ))
+mz <- lmer(EstTravelTime ~ Scenario + Distance + rush_hour_ind +(1 | CallID), data = x_expanded)
+```
+```{r}
+# Extract residuals
+resid_mz <- resid(mz)
+
+# Create a QQ plot using ggplot2
+qqplot_df <- data.frame(residuals = resid_mz)
+
+ggplot(qqplot_df, aes(sample = residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "QQ Plot of Residuals",
+       x = "Theoretical Quantiles",
+       y = "Sample Residuals") +
+      coord_cartesian(ylim = c(min(resid_mz), 100)) +  # set max y to 100
+  theme_minimal()
+
+fitted_m2 <- fitted(mz)
+resid_m2 <- resid(mz, type = "pearson")  # normalized residuals recommended for lme
+
+# Create a data frame for plotting
+resid_df <- data.frame(fitted = fitted_m2, residuals = resid_m2)
+
+# Plot residuals vs fitted
+ggplot(resid_df, aes(x = fitted, y = residuals)) +
+  geom_point(alpha = 0.5) +       # scatter points
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") + # reference line at 0
+  labs(title = "Residuals vs Fitted Values",
+       x = "Fitted Values",
+       y = "Pearson Residuals") +
+  theme_minimal()
+```
+
+```{r}
+mz_log <- lmer(log(EstTravelTime) ~ Scenario + Distance + rush_hour_ind +(1 | CallID), data = x_expanded)
+
+# Extract residuals
+resid_mz <- resid(mz_log)
+
+# Create a QQ plot using ggplot2
+qqplot_df <- data.frame(residuals = resid_mz)
+
+ggplot(qqplot_df, aes(sample = residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "QQ Plot of Residuals",
+       x = "Theoretical Quantiles",
+       y = "Sample Residuals") +
+      coord_cartesian(ylim = c(min(resid_mz), 100)) +  # set max y to 100
+  theme_minimal()
+
+fitted_m2 <- fitted(mz)
+resid_m2 <- resid(mz, type = "pearson")  # normalized residuals recommended for lme
+
+# Create a data frame for plotting
+resid_df <- data.frame(fitted = fitted_m2, residuals = resid_m2)
+
+# Plot residuals vs fitted
+ggplot(resid_df, aes(x = fitted, y = residuals)) +
+  geom_point(alpha = 0.5) +       # scatter points
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") + # reference line at 0
+  labs(title = "Residuals vs Fitted Values",
+       x = "Fitted Values",
+       y = "Pearson Residuals") +
+  theme_minimal()
+```
+
+```{r}
+library(sjPlot)
+tab_model(mz_log,
+          show.re.var = TRUE,      # show random effect variance
+          show.icc = TRUE,         # show intraclass correlation
+          show.se = TRUE,          # show standard errors
+          transform = NULL,        # already log-transformed
+          title = "Linear Mixed Model for log(EstTravelTime)")
+```
+
+
+
+```{r}
+m2 <- lme(EstTravelTime ~  Scenario + Distance + rush_hour_ind,
+             random = ~1 | CallID,
+             weights = varFixed(~ Distance),
+             data = x_expanded,
+             method = "REML")
+
+resid_m2 <- resid(m2, type = "pearson")  # normalized residuals are standard for QQ plots
+
+# Create QQ plot using ggplot2
+qqplot_df <- data.frame(residuals = resid_m2)
+
+ggplot(qqplot_df, aes(sample = residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "QQ Plot of Residuals for lme Model",
+       x = "Theoretical Quantiles",
+       y = "Sample Residuals") +
+    coord_cartesian(ylim = c(min(resid_m2), 100)) +  # set max y to 100
+  theme_minimal()
+
+fitted_m2 <- fitted(m2)
+resid_m2 <- resid(m2, type = "pearson")  # normalized residuals recommended for lme
+
+# Create a data frame for plotting
+resid_df <- data.frame(fitted = fitted_m2, residuals = resid_m2)
+
+# Plot residuals vs fitted
+ggplot(resid_df, aes(x = fitted, y = residuals)) +
+  geom_point(alpha = 0.5) +       # scatter points
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") + # reference line at 0
+  labs(title = "Residuals vs Fitted Values",
+       x = "Fitted Values",
+       y = "Pearson Residuals") +
+  theme_minimal()
+```
+
+```{r}
+m2
+```
+
+
+
+```{r}
+m2log <- lme(EstTravelTime ~  Scenario + Distance + rush_hour_ind,
+             random = ~1 | CallID,
+             weights = varFixed(~ Distance),
+             data = x_expanded,
+             method = "REML")
+
+resid_m2 <- resid(m2log, type = "pearson")  # normalized residuals are standard for QQ plots
+
+# Create QQ plot using ggplot2
+qqplot_df <- data.frame(residuals = resid_m2)
+
+ggplot(qqplot_df, aes(sample = residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "QQ Plot of Residuals for lme Model",
+       x = "Theoretical Quantiles",
+       y = "Sample Residuals") +
+      coord_cartesian(ylim = c(min(resid_m2), 100)) +  # set max y to 100
+  theme_minimal()
+
+fitted_m2 <- fitted(m2)
+resid_m2 <- resid(m2, type = "pearson")  # normalized residuals recommended for lme
+
+# Create a data frame for plotting
+resid_df <- data.frame(fitted = fitted_m2, residuals = resid_m2)
+
+# Plot residuals vs fitted
+ggplot(resid_df, aes(x = fitted, y = residuals)) +
+  geom_point(alpha = 0.5) +       # scatter points
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") + # reference line at 0
+  labs(title = "Residuals vs Fitted Values",
+       x = "Fitted Values",
+       y = "Pearson Residuals") +
+  theme_minimal()
+```
+
+
+## Future steps 
+#do normalized residuals instead 
+
+#look at the estimates that will show if we are having estimates
+
+#also do comparison across the covariates
+
+
+```{r}
+x_filtered <- x_expanded %>%
+  group_by(CallID) %>%
+  filter(var(EstTravelTime, na.rm = TRUE) > 0) %>%
+  ungroup()
+
+```
+```{r}
+library(lme4)
+
+mz_filtered <- lmer(
+  EstTravelTime ~ Scenario + Distance + rush_hour_ind + (1 | CallID),
+  data = x_filtered
+)
+
+```
+
+```{r}
+mz_log_filtered <- lmer(
+  log(EstTravelTime) ~ Scenario + Distance + rush_hour_ind + (1 | CallID),
+  data = x_filtered
+)
+
+```
+```{r}
+# Extract residuals and fitted values
+resid_filtered <- resid(mz_filtered)
+fitted_filtered <- fitted(mz_filtered)
+
+# Residuals vs Fitted
+ggplot(data.frame(fitted = fitted_filtered, residuals = resid_filtered),
+       aes(x = fitted, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Residuals vs Fitted (No-Change Calls Removed)",
+       x = "Fitted Values", y = "Residuals") +
+  theme_minimal()
+
+# QQ plot
+ggplot(data.frame(residuals = resid_filtered), aes(sample = residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "QQ Plot of Residuals (No-Change Calls Removed)",
+       x = "Theoretical Quantiles", y = "Sample Residuals") +
+  theme_minimal()
+
+```
+
+```{r}
+library(nlme)
+
+m_varident <- lme(
+  EstTravelTime ~ Scenario + Distance + rush_hour_ind,
+  random = ~1 | CallID,
+  weights = varIdent(form = ~1 | Scenario),
+  data = x_filtered,
+  method = "REML"
+)
+
+```
+
+```{r}
+# Extract normalized residuals (Pearson) and fitted values
+resid_vi <- resid(m_varident, type = "pearson")
+fitted_vi <- fitted(m_varident)
+
+# Residuals vs fitted
+library(ggplot2)
+
+ggplot(data.frame(fitted = fitted_vi, residuals = resid_vi),
+       aes(x = fitted, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Residuals vs Fitted (varIdent by Scenario)",
+       x = "Fitted Values", y = "Pearson Residuals") +
+  theme_minimal()
+
+# QQ plot
+ggplot(data.frame(residuals = resid_vi), aes(sample = residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "QQ Plot of Residuals (varIdent Model)",
+       x = "Theoretical Quantiles", y = "Sample Residuals") +
+  theme_minimal()
+
+# Histogram
+ggplot(data.frame(residuals = resid_vi), aes(x = residuals)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  labs(title = "Histogram of Residuals (varIdent Model)",
+       x = "Pearson Residuals", y = "Count") +
+  theme_minimal()
+
+```
 
