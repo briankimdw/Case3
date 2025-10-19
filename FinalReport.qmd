@@ -12,20 +12,19 @@ In response to this issue and demand for EMS coverage in the North region, Vance
 
 The main motivation of this analysis is to assess how travel times and system load vary across different station allocation scenarios which are listed in table 1 of the appendix and in particular we aim to answer the two central questions: 1) which of the two possible Northern station locations would better serve the community and 2) how should the four available ambulances be allocated across stations to optimize service coverage and response times.
 
-
-
-
-
 ## 2 Exploratory Data Analysis
 
+We modeled the distribution of best-guess travel time and from the histogram shown in figure 1 we can see that south station has a shorter median travel time and both the near north and far north stations have a longer travel time with a wider variability. We can see that the far north has the widest spread and the most outliers which implies more inconsistent travel times possibly stemming from it being so far up north by itself.
 
+Talk about load conflict
 
+mixed model thing
 
 ## 3 Modeling
 
+Before the modeling we make some assumptions on how we will dispatch the ambulances. For scenario 0 which is our baseline where we just have 3 ambulances in central and 1 in the south station, we will assume that all north and central calls are taken by the central station and the south calls are taken by the south station ambulances. For scenarios 1 and 2 which are still 3 ambulances in the central but we move the south station to either the near north or far north station respectively, we assume that north calls are taken only by the North station and the central and south calls are only taken by the central station ambulances. Finally for scenarios 3 and 4 which are the ones where we keep the 1 south ambulance in the south station but move one of the central stations to either the near north or far north station respectively, we just assume all calls are taken by the same region station ambulance. The only exception to our modeling assumptions is if there are 3+ load conflicts at a assigned station, we make the available ambulance from the next closest station to be dispatched to take the call.
 
 ## 4 Results
-
 
 ## 5 Conclusion and Future Work
 
@@ -35,19 +34,101 @@ Some limitations is that our model assumes traffic level to be constant througho
 
 In the future we can try adding time of day for a random effects which could provide a deeper insight into temporal variation in the response times. We can model this using a continous smooth spline approach using mgcr or poly to capture the nonlinear daily trends without overfitting. We can also try a Bayesian approach to improve interpretability, particularly in regions with fewer calls. Through partial pooling and uncertainty propagation, the use of this approach would allow information sharing across districts while accounting for data sparsity. Finally, a hierarchical modeling approach could be implemented to account for further subdivisions in call type and urgency and this would allow our model to distinguish between the emergency severity levels and incorporate medical criteria for the urgency of each call which could change how we allocate the ambulances across the systems.
 
-
-
-
-
 ## 6 Appendix
 
+| **Scenarios**  | **S0 (Current)** | **S1** | **S2** | **S3** | **S4** |
+|:---------------|:----------------:|:------:|:------:|:------:|:------:|
+| **Far North**  |        0         |   0    |   1    |   0    |   1    |
+| **Near North** |        0         |   1    |   0    |   1    |   0    |
+| **Central**    |        3         |   3    |   3    |   2    |   2    |
+| **South**      |        1         |   0    |   0    |   1    |   1    |
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(lubridate)
+load("emsData.RData")
+```
+
+### Exploratory Data Analysis
+
+```{r, echo = FALSE, warning = FALSE,message=FALSE}
+
+#don't remove central, fix this.
+#we are assuming that we are only looking at causes in south and north then
+
+#this is why i removed central because this option means that is separate
+x |>
+  select(eTT.BG.So, eTT.BG.NN, eTT.BG.FN, REF.GRID) |> 
+  filter(REF.GRID != "2 Central") |>
+  select(-REF.GRID) |>
+  pivot_longer(cols = everything(),
+               names_to = "source",
+               values_to = "value") |> 
+  ggplot(aes(x = source, y = value)) +
+  geom_boxplot() +
+  labs(
+    x = "Source",
+    y = "eTT.BG Value",
+    title = "Distribution of eTT.BG by Source"
+  ) +
+  theme_minimal()
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+x<- x %>%
+  mutate(
+    disp_hour = hour(DT.DISP),
+    disp_min  = minute(DT.DISP),
+    rush_hour = !is.na(DT.DISP) & (
+      
+      #morning 7:30pm - 9:30am
+      (disp_hour == 7 & disp_min >= 30) |
+      (disp_hour == 8) |
+      (disp_hour == 9 & disp_min < 30) |
+      
+      #evening 4:00pm - 6:30pm
+      (disp_hour == 16) |
+      (disp_hour == 17) |
+      (disp_hour == 18 & disp_min < 30)
+    ),
+    # 1 if rush hour 0 else
+    rush_hour_ind = as.integer(rush_hour)  
+  ) %>%
+  select(-disp_hour, -disp_min)
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+time = cbind(x$eTT.BG.NN, x$eTT.BG.FN, x$eTT.BG.So)
 
 
-| **Scenarios** | **S0 (Current)** | **S1** | **S2** | **S3** | **S4** |
-|:--------------|:----------------:|:------:|:------:|:------:|:------:|
-| **Far North** | 0 | 0 | 1 | 0 | 1 |
-| **Near North** | 0 | 1 | 0 | 1 | 0 |
-| **Central** | 3 | 3 | 3 | 2 | 2 |
-| **South** | 1 | 0 | 0 | 1 | 1 |
+x %>%
+  select(eTT.BG.NN, eTT.BG.FN, eTT.BG.So) %>%
+  pivot_longer(cols = everything(),
+               names_to = "source",
+               values_to = "time") %>%
+  ggplot(aes(x = time, color = source)) +
+  geom_density(linewidth = 1.2) +
+  labs(
+    x = "Time",
+    y = "Density",
+    title = "Distribution of eTT.BG Values (All Sources)"
+  ) +
+  theme_minimal()
+```
 
+```{r}
+conflicts <- df %>%
+  filter(DT.AVAILABLE > DT.DISP) %>%
+  mutate(
+    conflict_minutes = as.numeric(difftime(DT.AVAILABLE, DT.DISP, units = "mins"))
+  )
 
+ggplot(conflicts, aes(x = conflict_minutes)) +
+  geom_histogram(binwidth = 5, fill = "steelblue", color = "white") +
+  labs(title = "Conflict Duration Distribution",
+       x = "Conflict Duration (minutes)",
+       y = "Count") +
+  theme_minimal()
+```
