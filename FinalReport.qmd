@@ -20,13 +20,18 @@ Talk about load conflict
 
 mixed model thing
 
-## 3 Modeling
+## 3 Model Assumptions & Assessment
 
-Before the modeling we make some assumptions on how we will dispatch the ambulances. For scenario 0 which is our baseline where we just have 3 ambulances in central and 1 in the south station, we will assume that all north and central calls are taken by the central station and the south calls are taken by the south station ambulances. For scenarios 1 and 2 which are still 3 ambulances in the central but we move the south station to either the near north or far north station respectively, we assume that north calls are taken only by the North station and the central and south calls are only taken by the central station ambulances. Finally for scenarios 3 and 4 which are the ones where we keep the 1 south ambulance in the south station but move one of the central stations to either the near north or far north station respectively, we just assume all calls are taken by the same region station ambulance. The only exception to our modeling assumptions is if there are 3+ load conflicts at a assigned station, we make the available ambulance from the next closest station to be dispatched to take the call.
+Before the modeling, we set a “dispatch rule” on how we will dispatch the ambulances. For scenario 0 which is our baseline where we just have 3 ambulances in central and 1 in the south station, we will assume that all north and central calls are taken by the central station and the south calls are taken by the south station ambulances. For scenarios 1 and 2 which are still 3 ambulances in the central but we move the south station to either the near north or far north station respectively, we assume that north calls are taken only by the North station and the central and south calls are only taken by the central station ambulances. Finally for scenarios 3 and 4 which are the ones where we keep the 1 south ambulance in the south station but move one of the central stations to either the near north or far north station respectively, we just assume all calls are taken by the same region station ambulance. The only exception to our modeling assumptions is if there are 3+ load conflicts at a assigned station, we make the available ambulance from the next closest station to be dispatched to take the call.
 
 Under the assumption of a hierarchical approach where we condition on the calls where there is a total change in time, we fit a couple of models. The covariates are _______. They are both linear mixed models where utilize a random effect for a call since there is within group variation for each call. One takes into account heteroscedasticity concern and varies potential errors by longitude and latitude. 
+(EXPLAIN RESIDUAL PLOT ETC HERE)
 
+Based on these assessments, our final model is the following linear mixed model: ResponseTime ~ Scenario + Distance + RushHour + (1 | CallID) + ε
 
+For fixed effects, we include scenarios as a categorical variable, with S0 as baseline and S1~S4 as changes. Distance from the station to the call location is set as a continuous variable. We also include rush hour as binary variable to account for traffic level, by categorizing the time of day into non-rush vs rush hour. We define rush hour to be 7:30-9:30AM and 4:00-6:30PM for each day, as per observation of average traffic levels. The model’s random effects accounts for variation by call group, and residual error models day-to-day variance.
+
+For model assumptions, we first let residual error follow a normal distribution, We also assume traffic level to be consistent within and outside rush hours, to simplify traffic levels on a binary level rather than continuous. Based on our residual plot, we do not model for heteroscedasticity for random effects as it leads to a better model fit. Finally, we assume that if distance is the same, the actual latitude and longitude coordinates would not affect response time differently. 
 
 
 ## 4 Results
@@ -42,6 +47,21 @@ For model assumptions, we first let residual error follow a normal distribution,
 
 
 Linked below (ADD THE TABLE NUMBER) is our coefficient summary for the better fit model. We find that none of the scenarios are significant 
+
+
+
+### Question 1
+
+If relocate to north: faster response time – near north vs far north? 
+
+### Question 2
+
+If relocate to north: faster response time – south vs central? 
+
+### Question 3
+
+Overall: does relocation to north yield significant benefit? 
+
 
 
 ## 5 Conclusion and Future Work
