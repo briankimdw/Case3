@@ -34,11 +34,14 @@ Under the assumption of a hierarchical approach where we condition on the calls 
 We note that there are different residuals for the aforementioned fits. We find that when examining the normality condition, that the model without the error variations seems to be a better fit for the data as seen in (ref the Q-Q plots), and consequently we analyze the results under the fit without the additional variation. 
 
 
-Our final model is the following linear mixed model: ResponseTime ~ Scenario + Distance + RushHour + (1 | CallID) + ε
+Our final model is the following linear mixed model: ResponseTime ~ Scenario + Distance + RushHour + (1 | CallID) + $\epsilon$
 
 For fixed effects, we included scenarios as a categorical variable, with S0 as baseline and S1~S4 as changes. Distance from the station to the call location was set as a continuous variable. We also decided to include rush hour as binary variable to account for traffic level, by categorizing the time of day into non-rush vs rush hour. We defined rush hour to be 7:30-9:30AM and 4:00-6:30PM for each day, as per observation of average traffic levels. The model’s random effects accounted for variation by call group, and residual error modeled day-to-day variance.
 
 For model assumptions, we first let residual error follow a normal distribution, We also assumed traffic level to be consistent within and outside rush hours, to simplify traffic levels on a binary level rather than continuous. Based on our residual plot, we did not model for heteroscedasticity for random effects as it led to a better model fit. Finally, we assumed that if distance is the same, the actual latitude and longitude coordinates would not affect response time differently. 
+
+
+Linked below (ADD THE TABLE NUMBER) is our coefficient summary for the better fit model. We find that none of the scenarios are significant 
 
 
 ## 5 Conclusion and Future Work
