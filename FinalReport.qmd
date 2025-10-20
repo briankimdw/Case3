@@ -10,7 +10,7 @@ The Vance County Emergency Medical Services system currently operates four ambul
 
 In response to this issue and demand for EMS coverage in the North region, Vance county is evaluating the potential of adding a new station in one of the two northern locations: near north or far north station. We use historical EMS call data to make a decision. Each record in the dataset represents one individual emergency trip which includes information like dispatch station, patient location coordinates, and time logs for dispatch, arrival, hospital transport, and clearance.
 
-The main motivation of this analysis is to assess how travel times and system load vary across different station allocation scenarios which are listed in table 1 of the appendix and in particular we aim to answer the two central questions: 1) which of the two possible Northern station locations would better serve the community and 2) how should the four available ambulances be allocated across stations to optimize service coverage and response times.
+The main motivation of this analysis is to assess how travel times and system load vary across different station allocation scenarios which are listed in table 1 of the appendix and in particular we aim to answer three central questions: 1) which of the two possible Northern station locations would better serve the community through faster response time 2) which relocation (South or Central) would yield to improved response time and 3) how should the four available ambulances be allocated across stations to optimize service coverage and response times.
 
 ## 2 Exploratory Data Analysis
 
@@ -24,7 +24,15 @@ mixed model thing
 
 Before the modeling we make some assumptions on how we will dispatch the ambulances. For scenario 0 which is our baseline where we just have 3 ambulances in central and 1 in the south station, we will assume that all north and central calls are taken by the central station and the south calls are taken by the south station ambulances. For scenarios 1 and 2 which are still 3 ambulances in the central but we move the south station to either the near north or far north station respectively, we assume that north calls are taken only by the North station and the central and south calls are only taken by the central station ambulances. Finally for scenarios 3 and 4 which are the ones where we keep the 1 south ambulance in the south station but move one of the central stations to either the near north or far north station respectively, we just assume all calls are taken by the same region station ambulance. The only exception to our modeling assumptions is if there are 3+ load conflicts at a assigned station, we make the available ambulance from the next closest station to be dispatched to take the call.
 
+Under the assumption of a hierarchical approach where we condition on the calls where there is a total change in time, we fit a couple of models. The covariates are _______. They are both linear mixed models where utilize a random effect for a call since there is within group variation for each call. One takes into account heteroscedasticity concern and varies potential errors by longitude and latitude. 
+
+
+
+
 ## 4 Results
+
+We note that there are different residuals for the aforementioned fits. We find that when examining the normality condition, that the model without the error variations seems to be a better fit for the data as seen in (ref the Q-Q plots), and consequently we analyze the results under the fit without the additional variation. 
+
 
 ## 5 Conclusion and Future Work
 
@@ -304,6 +312,23 @@ mz_log_filtered <- lmer(
   data = x_filtered
 )
 ```
+
+```{r}
+
+
+tab_model(
+  mz_filtered,
+  show.re.var = TRUE,
+  show.icc = TRUE,
+  show.se = TRUE,
+  transform = NULL,
+  title = "Linear Mixed Model for EstTravelTime",
+  file = "model_table.tex"   # <<--- THIS is the key
+)
+
+```
+
+
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 # Extract residuals and fitted values
