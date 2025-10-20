@@ -36,20 +36,18 @@ In the future we can try adding time of day for a random effects which could pro
 
 ## 6 Appendix
 
-| **Scenarios**  | **S0 (Current)** | **S1** | **S2** | **S3** | **S4** |
-|:---------------|:----------------:|:------:|:------:|:------:|:------:|
-| **Far North**  |        0         |   0    |   1    |   0    |   1    |
-| **Near North** |        0         |   1    |   0    |   1    |   0    |
-| **Central**    |        3         |   3    |   3    |   2    |   2    |
-| **South**      |        1         |   0    |   0    |   1    |   1    |
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 library(dplyr)
 library(ggplot2)
 library(tidyr)
 library(lubridate)
+library(lme4)
 library(IRanges)
+library(broom.mixed)
 library(tidyverse)
+library(nlme)
+library(sjPlot)
 if (!requireNamespace("IRanges", quietly = TRUE)) {
   install.packages("BiocManager")
   BiocManager::install("IRanges")
@@ -57,7 +55,96 @@ if (!requireNamespace("IRanges", quietly = TRUE)) {
 load("emsData.RData")
 ```
 
-### Exploratory Data Analysis
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+x<- x %>%
+  mutate(
+    disp_hour = hour(DT.DISP),
+    disp_min  = minute(DT.DISP),
+    rush_hour = !is.na(DT.DISP) & (
+      
+      #morning 7:30pm - 9:30am
+      (disp_hour == 7 & disp_min >= 30) |
+      (disp_hour == 8) |
+      (disp_hour == 9 & disp_min < 30) |
+      
+      #evening 4:00pm - 6:30pm
+      (disp_hour == 16) |
+      (disp_hour == 17) |
+      (disp_hour == 18 & disp_min < 30)
+    ),
+    # 1 if rush hour 0 else
+    rush_hour_ind = as.integer(rush_hour)  
+  ) %>%
+  select(-disp_hour, -disp_min)
+
+x_expanded <- x %>%
+  # create a unique ID per original row
+  mutate(CallID = row_number()) %>%
+  
+  # repeat rows for 5 scenarios
+  tidyr::uncount(weights = 5, .id = "scenario_id") %>%
+  mutate(
+    Scenario = paste0("S", scenario_id - 1),
+    
+    # extract call location from REF.GRID
+    CallLoc = str_extract(REF.GRID, "(South|Central|North)"),
+    # normalize to codes
+    CallLocCode = case_when(
+      CallLoc == "South"   ~ "So",
+      CallLoc == "Central" ~ "Ce",
+      CallLoc == "North"   ~ "NN"  # treat all "North" as "NN"
+    ),
+    
+    # dispatch rules
+    Dispatch = case_when(
+      # S0
+      Scenario == "S0" & CallLocCode == "NN" ~ "Ce",
+      Scenario == "S0" & CallLocCode == "Ce" ~ "Ce",
+      Scenario == "S0" & CallLocCode == "So" ~ "So",
+      
+      # S1
+      Scenario == "S1" & CallLocCode == "NN" ~ "NN",
+      Scenario == "S1" & CallLocCode == "Ce" ~ "Ce",
+      Scenario == "S1" & CallLocCode == "So" ~ "Ce",
+      
+      # S2
+      Scenario == "S2" & CallLocCode == "NN" ~ "FN",
+      Scenario == "S2" & CallLocCode == "Ce" ~ "Ce",
+      Scenario == "S2" & CallLocCode == "So" ~ "Ce",
+      
+      # S3
+      Scenario == "S3" & CallLocCode == "NN" ~ "NN",
+      Scenario == "S3" & CallLocCode == "Ce" ~ "Ce",
+      Scenario == "S3" & CallLocCode == "So" ~ "So",
+      
+      # S4
+      Scenario == "S4" & CallLocCode == "NN" ~ "FN",
+      Scenario == "S4" & CallLocCode == "Ce" ~ "Ce",
+      Scenario == "S4" & CallLocCode == "So" ~ "So"
+    ),
+    
+    # pick the correct estimated travel time
+    EstTravelTime = case_when(
+      Dispatch == "So" ~ eTT.BG.So,
+      Dispatch == "Ce" ~ eTT.BG.Ce,
+      Dispatch == "NN" ~ eTT.BG.NN,
+      Dispatch == "FN" ~ eTT.BG.FN
+    )
+  ) %>%
+  select(-scenario_id)
+
+x_expanded <- x_expanded %>%
+  mutate(Distance = case_when(
+    Dispatch == "So" ~ Dist.So,
+    Dispatch == "Ce" ~ Dist.Ce,
+    Dispatch == "NN" ~ Dist.NN,
+    Dispatch == "FN" ~ Dist.FN
+  ))
+
+```
+
+
+## Exploratory Data Analysis
 
 ```{r, echo = FALSE, warning = FALSE,message=FALSE}
 
@@ -162,6 +249,125 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
   labs(title = "Conflict Duration Distribution",
        x = "Conflict Duration (minutes)",
        y = "Count") +
+  theme_minimal()
+```
+
+
+### Linear Mixed Model
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+formula_latex <- "EstTravelTime ~ Scenario + (1 | CallID)"
+
+# Fit the model
+m <- lmer(EstTravelTime ~ Scenario + (1 | CallID), data = x_expanded)
+
+# Extract fixed effects, exclude intercept
+coefs <- broom.mixed::tidy(m, effects = "fixed", conf.int = TRUE) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(Significant = !(conf.low <= 0 & conf.high >= 0))
+
+# Plot
+ggplot(coefs, aes(x = term, y = estimate, color = Significant)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
+  scale_color_manual(values = c("grey60", "steelblue")) +
+  coord_flip() +
+  labs(x = "", y = "Coefficient estimate",
+       title = "Fixed effects (significant ones highlighted)") +
+  theme_minimal()
+```
+
+## Modeling 
+
+| **Scenarios**  | **S0 (Current)** | **S1** | **S2** | **S3** | **S4** |
+|:---------------|:----------------:|:------:|:------:|:------:|:------:|
+| **Far North**  |        0         |   0    |   1    |   0    |   1    |
+| **Near North** |        0         |   1    |   0    |   1    |   0    |
+| **Central**    |        3         |   3    |   3    |   2    |   2    |
+| **South**      |        1         |   0    |   0    |   1    |   1    |
+
+
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+x_filtered <- x_expanded %>%
+  group_by(CallID) %>%
+  filter(var(EstTravelTime, na.rm = TRUE) > 0) %>%
+  ungroup()
+
+mz_filtered <- lmer(
+  EstTravelTime ~ Scenario + Distance + rush_hour_ind + (1 | CallID),
+  data = x_filtered
+)
+
+mz_log_filtered <- lmer(
+  log(EstTravelTime) ~ Scenario + Distance + rush_hour_ind + (1 | CallID),
+  data = x_filtered
+)
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# Extract residuals and fitted values
+resid_filtered <- resid(mz_filtered)
+fitted_filtered <- fitted(mz_filtered)
+
+# Residuals vs Fitted
+ggplot(data.frame(fitted = fitted_filtered, residuals = resid_filtered),
+       aes(x = fitted, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Residuals vs Fitted (No-Change Calls Removed)",
+       x = "Fitted Values", y = "Residuals") +
+  theme_minimal()
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# QQ plot
+ggplot(data.frame(residuals = resid_filtered), aes(sample = residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "QQ Plot of Residuals (No-Change Calls Removed)",
+       x = "Theoretical Quantiles", y = "Sample Residuals") +
+  theme_minimal()
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+m_varident <- lme(
+  EstTravelTime ~ Scenario + Distance + rush_hour_ind,
+  random = ~1 | CallID,
+  weights = varIdent(form = ~1 | Scenario),
+  data = x_filtered,
+  method = "REML"
+)
+# Extract normalized residuals (Pearson) and fitted values
+resid_vi <- resid(m_varident, type = "pearson")
+fitted_vi <- fitted(m_varident)
+
+ggplot(data.frame(fitted = fitted_vi, residuals = resid_vi),
+       aes(x = fitted, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Residuals vs Fitted (varIdent by Scenario)",
+       x = "Fitted Values", y = "Pearson Residuals") +
+  theme_minimal()
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# QQ plot
+ggplot(data.frame(residuals = resid_vi), aes(sample = residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "QQ Plot of Residuals (varIdent Model)",
+       x = "Theoretical Quantiles", y = "Sample Residuals") +
+  theme_minimal()
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# Histogram
+ggplot(data.frame(residuals = resid_vi), aes(x = residuals)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  labs(title = "Histogram of Residuals (varIdent Model)",
+       x = "Pearson Residuals", y = "Count") +
   theme_minimal()
 ```
 
