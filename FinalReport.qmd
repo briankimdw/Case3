@@ -34,6 +34,13 @@ Under the assumption of a hierarchical approach where we condition on the calls 
 We note that there are different residuals for the aforementioned fits. We find that when examining the normality condition, that the model without the error variations seems to be a better fit for the data as seen in (ref the Q-Q plots), and consequently we analyze the results under the fit without the additional variation. 
 
 
+Our final model is the following linear mixed model: ResponseTime ~ Scenario + Distance + RushHour + (1 | CallID) + ε
+
+For fixed effects, we included scenarios as a categorical variable, with S0 as baseline and S1~S4 as changes. Distance from the station to the call location was set as a continuous variable. We also decided to include rush hour as binary variable to account for traffic level, by categorizing the time of day into non-rush vs rush hour. We defined rush hour to be 7:30-9:30AM and 4:00-6:30PM for each day, as per observation of average traffic levels. The model’s random effects accounted for variation by call group, and residual error modeled day-to-day variance.
+
+For model assumptions, we first let residual error follow a normal distribution, We also assumed traffic level to be consistent within and outside rush hours, to simplify traffic levels on a binary level rather than continuous. Based on our residual plot, we did not model for heteroscedasticity for random effects as it led to a better model fit. Finally, we assumed that if distance is the same, the actual latitude and longitude coordinates would not affect response time differently. 
+
+
 ## 5 Conclusion and Future Work
 
 Our analysis showed that relocation to far north resulted in faster response times than near north. We have also shown that it is better to move central ambulances up north than moving the south ambulance and saw that relocating one ambulance from central to far north station reduces response times by about 4%. Therefore from our analysis we saw scenario 4 which is 1 far north, 2 central, and 1 south was the most optimal layout of the 4 ambulances as it reduces the average response time by 4% compared to the baseline of scenario 0.
@@ -314,20 +321,20 @@ mz_log_filtered <- lmer(
 ```
 
 ```{r}
-
-
 tab_model(
   mz_filtered,
   show.re.var = TRUE,
   show.icc = TRUE,
   show.se = TRUE,
   transform = NULL,
-  title = "Linear Mixed Model for EstTravelTime",
-  file = "model_table.tex"   # <<--- THIS is the key
+  title = "Linear Mixed Model for EstTravelTime"
 )
 
 ```
 
+### Table: Linear Mixed Model for EstTravelTime
+
+![](model.png){width=90%}
 
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
