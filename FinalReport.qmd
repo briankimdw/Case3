@@ -43,12 +43,17 @@ In the future we can try adding time of day for a random effects which could pro
 | **Central**    |        3         |   3    |   3    |   2    |   2    |
 | **South**      |        1         |   0    |   0    |   1    |   1    |
 
-```{r}
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
 library(dplyr)
 library(ggplot2)
 library(tidyr)
 library(lubridate)
 library(IRanges)
+library(tidyverse)
+if (!requireNamespace("IRanges", quietly = TRUE)) {
+  install.packages("BiocManager")
+  BiocManager::install("IRanges")
+}
 load("emsData.RData")
 ```
 
@@ -119,8 +124,8 @@ x %>%
   theme_minimal()
 ```
 
-```{r}
-conflicts <- df %>%
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+conflicts <- x %>%
   filter(DT.AVAILABLE > DT.DISP) %>%
   mutate(
     conflict_minutes = as.numeric(difftime(DT.AVAILABLE, DT.DISP, units = "mins"))
@@ -134,11 +139,8 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
   theme_minimal()
 ```
 
-```{r}
-if (!requireNamespace("IRanges", quietly = TRUE)) {
-  install.packages("BiocManager")
-  BiocManager::install("IRanges")
-}
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
 
 
 # Assume conflicts already has DT.DISP and DT.AVAILABLE
