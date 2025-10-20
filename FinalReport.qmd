@@ -48,6 +48,7 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 library(lubridate)
+library(IRanges)
 load("emsData.RData")
 ```
 
@@ -132,3 +133,33 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
        y = "Count") +
   theme_minimal()
 ```
+
+```{r}
+if (!requireNamespace("IRanges", quietly = TRUE)) {
+  install.packages("BiocManager")
+  BiocManager::install("IRanges")
+}
+
+
+# Assume conflicts already has DT.DISP and DT.AVAILABLE
+intervals <- IRanges(start = as.numeric(conflicts$DT.DISP),
+                     end = as.numeric(conflicts$DT.AVAILABLE))
+
+# Count how many intervals overlap at each start
+overlap_counts <- countOverlaps(intervals, intervals)
+
+# Filter rows where there are at least 3 overlapping intervals
+conflicts_3plus <- conflicts[overlap_counts >= 3, ]
+
+conflicts <- conflicts %>%
+  mutate(overlap_count = overlap_counts,
+         overlap_level = ifelse(overlap_count >= 3, "3+ conflicts", "1-2 conflicts"))
+
+ggplot(conflicts, aes(x = conflict_minutes)) +
+  geom_histogram(binwidth = 5, fill = "steelblue", color = "white") +
+  labs(title = "Conflict Duration Distribution",
+       x = "Conflict Duration (minutes)",
+       y = "Count") +
+  theme_minimal()
+```
+
