@@ -24,45 +24,41 @@ mixed model thing
 
 Before the modeling, we set a “dispatch rule” on how we will dispatch the ambulances. For scenario 0 which is our baseline where we just have 3 ambulances in central and 1 in the south station, we will assume that all north and central calls are taken by the central station and the south calls are taken by the south station ambulances. For scenarios 1 and 2 which are still 3 ambulances in the central but we move the south station to either the near north or far north station respectively, we assume that north calls are taken only by the North station and the central and south calls are only taken by the central station ambulances. Finally for scenarios 3 and 4 which are the ones where we keep the 1 south ambulance in the south station but move one of the central stations to either the near north or far north station respectively, we just assume all calls are taken by the same region station ambulance. The only exception to our modeling assumptions is if there are 3+ load conflicts at a assigned station, we make the available ambulance from the next closest station to be dispatched to take the call.
 
-Under the assumption of a hierarchical approach where we condition on the calls where there is a total change in time, we fit a couple of models. The covariates are _______. They are both linear mixed models where utilize a random effect for a call since there is within group variation for each call. One takes into account heteroscedasticity concern and varies potential errors by longitude and latitude. 
-(EXPLAIN RESIDUAL PLOT ETC HERE)
+Under the assumption of a hierarchical approach where we condition on the calls where there is a total change in time, we fit a couple of models. The covariates are \_\_\_\_\_\_\_. They are both linear mixed models where utilize a random effect for a call since there is within group variation for each call. One takes into account heteroscedasticity concern and varies potential errors by longitude and latitude. (EXPLAIN RESIDUAL PLOT ETC HERE)
 
-Based on these assessments, our final model is the following linear mixed model: ResponseTime ~ Scenario + Distance + RushHour + (1 | CallID) + ε
+Based on these assessments, our final model is the following linear mixed model: ResponseTime \~ Scenario + Distance + RushHour + (1 \| CallID) + ε
 
-For fixed effects, we include scenarios as a categorical variable, with S0 as baseline and S1~S4 as changes. Distance from the station to the call location is set as a continuous variable. We also include rush hour as binary variable to account for traffic level, by categorizing the time of day into non-rush vs rush hour. We define rush hour to be 7:30-9:30AM and 4:00-6:30PM for each day, as per observation of average traffic levels. The model’s random effects accounts for variation by call group, and residual error models day-to-day variance.
+For fixed effects, we include scenarios as a categorical variable, with S0 as baseline and S1\~S4 as changes. Distance from the station to the call location is set as a continuous variable. We also include rush hour as binary variable to account for traffic level, by categorizing the time of day into non-rush vs rush hour. We define rush hour to be 7:30-9:30AM and 4:00-6:30PM for each day, as per observation of average traffic levels. The model’s random effects accounts for variation by call group, and residual error models day-to-day variance.
 
-For model assumptions, we first let residual error follow a normal distribution, We also assume traffic level to be consistent within and outside rush hours, to simplify traffic levels on a binary level rather than continuous. Based on our residual plot, we do not model for heteroscedasticity for random effects as it leads to a better model fit. Finally, we assume that if distance is the same, the actual latitude and longitude coordinates would not affect response time differently. 
-
+For model assumptions, we first let residual error follow a normal distribution, We also assume traffic level to be consistent within and outside rush hours, to simplify traffic levels on a binary level rather than continuous. Based on our residual plot, we do not model for heteroscedasticity for random effects as it leads to a better model fit. Finally, we assume that if distance is the same, the actual latitude and longitude coordinates would not affect response time differently.
 
 ## 4 Results
 
-We note that there are different residuals for the aforementioned fits. We find that when examining the normality condition, that the model without the error variations seems to be a better fit for the data as seen in (ref the Q-Q plots), and consequently we analyze the results under the fit without the additional variation. 
+We note that there are different residuals for the aforementioned fits. We find that when examining the normality condition, that the model without the error variations seems to be a better fit for the data as seen in **Figures 7 and 9**, and consequently we analyze the results under the fit without the additional variation.
 
+Our final model is the following linear mixed model:
 
-Our final model is the following linear mixed model: ResponseTime ~ Scenario + Distance + RushHour + (1 | CallID) + $\epsilon$
+$$
+Response\ Time \sim Scenario + Distance + RushHour + (1 | CallID) + \epsilon
+$$
 
-For fixed effects, we included scenarios as a categorical variable, with S0 as baseline and S1~S4 as changes. Distance from the station to the call location was set as a continuous variable. We also decided to include rush hour as binary variable to account for traffic level, by categorizing the time of day into non-rush vs rush hour. We defined rush hour to be 7:30-9:30AM and 4:00-6:30PM for each day, as per observation of average traffic levels. The model’s random effects accounted for variation by call group, and residual error modeled day-to-day variance.
+For fixed effects, we included scenarios as a categorical variable, with S0 as baseline and S1\~S4 as changes. Distance from the station to the call location was set as a continuous variable. We also decided to include rush hour as binary variable to account for traffic level, by categorizing the time of day into non-rush vs rush hour. We defined rush hour to be 7:30-9:30AM and 4:00-6:30PM for each day, as per observation of average traffic levels. The model’s random effects accounted for variation by call group, and residual error modeled day-to-day variance.
 
-For model assumptions, we first let residual error follow a normal distribution, We also assumed traffic level to be consistent within and outside rush hours, to simplify traffic levels on a binary level rather than continuous. Based on our residual plot, we did not model for heteroscedasticity for random effects as it led to a better model fit. Finally, we assumed that if distance is the same, the actual latitude and longitude coordinates would not affect response time differently. 
+For model assumptions, we first let residual error follow a normal distribution, We also assumed traffic level to be consistent within and outside rush hours, to simplify traffic levels on a binary level rather than continuous. Based on our residual plot, we did not model for heteroscedasticity for random effects as it led to a better model fit. Finally, we assumed that if distance is the same, the actual latitude and longitude coordinates would not affect response time differently.
 
-
-Linked below (ADD THE TABLE NUMBER) is our coefficient summary for the better fit model. We find that none of the scenarios are significant 
-
-
+**Table 2** is our coefficient summary for the better fit model. We can see that the estimated coefficients for all four Scenario indicators have p values that are greater than 0.05 and their 95% confidence intervals all cross zero which indicates that holding Distance and Rush Hour constant, there is no statistically significant evidence that response time differs across the alternative allocation scenarios compared to the baseline configuration of S0.
 
 ### Question 1
 
-If relocate to north: faster response time – near north vs far north? 
+If relocate to north: faster response time – near north vs far north?
 
 ### Question 2
 
-If relocate to north: faster response time – south vs central? 
+If relocate to north: faster response time – south vs central?
 
 ### Question 3
 
-Overall: does relocation to north yield significant benefit? 
-
-
+Overall: does relocation to north yield significant benefit?
 
 ## 5 Conclusion and Future Work
 
@@ -73,7 +69,6 @@ Some limitations is that our model assumes traffic level to be constant througho
 In the future we can try adding time of day for a random effects which could provide a deeper insight into temporal variation in the response times. We can model this using a continous smooth spline approach using mgcr or poly to capture the nonlinear daily trends without overfitting. We can also try a Bayesian approach to improve interpretability, particularly in regions with fewer calls. Through partial pooling and uncertainty propagation, the use of this approach would allow information sharing across districts while accounting for data sparsity. Finally, a hierarchical modeling approach could be implemented to account for further subdivisions in call type and urgency and this would allow our model to distinguish between the emergency severity levels and incorporate medical criteria for the urgency of each call which could change how we allocate the ambulances across the systems.
 
 ## 6 Appendix
-
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 library(dplyr)
@@ -181,8 +176,9 @@ x_expanded <- x_expanded %>%
 
 ```
 
-
 ## Exploratory Data Analysis
+
+#### Figure 1
 
 ```{r, echo = FALSE, warning = FALSE,message=FALSE}
 
@@ -207,6 +203,8 @@ x |>
   theme_minimal()
 ```
 
+#### 
+
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 x<- x %>%
   mutate(
@@ -230,6 +228,8 @@ x<- x %>%
   select(-disp_hour, -disp_min)
 ```
 
+#### Figure 2
+
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 time = cbind(x$eTT.BG.NN, x$eTT.BG.FN, x$eTT.BG.So)
 
@@ -249,6 +249,8 @@ x %>%
   theme_minimal()
 ```
 
+#### Figure 3
+
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 conflicts <- x %>%
   filter(DT.AVAILABLE > DT.DISP) %>%
@@ -264,9 +266,9 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
   theme_minimal()
 ```
 
+#### Figure 4
+
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
-
-
 
 # Assume conflicts already has DT.DISP and DT.AVAILABLE
 intervals <- IRanges(start = as.numeric(conflicts$DT.DISP),
@@ -290,8 +292,7 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
   theme_minimal()
 ```
 
-
-### Linear Mixed Model
+#### Figure 5
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 formula_latex <- "EstTravelTime ~ Scenario + (1 | CallID)"
@@ -315,7 +316,9 @@ ggplot(coefs, aes(x = term, y = estimate, color = Significant)) +
   theme_minimal()
 ```
 
-## Modeling 
+## Modeling
+
+#### Table 1
 
 | **Scenarios**  | **S0 (Current)** | **S1** | **S2** | **S3** | **S4** |
 |:---------------|:----------------:|:------:|:------:|:------:|:------:|
@@ -323,8 +326,6 @@ ggplot(coefs, aes(x = term, y = estimate, color = Significant)) +
 | **Near North** |        0         |   1    |   0    |   1    |   0    |
 | **Central**    |        3         |   3    |   3    |   2    |   2    |
 | **South**      |        1         |   0    |   0    |   1    |   1    |
-
-
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 x_filtered <- x_expanded %>%
@@ -343,7 +344,7 @@ mz_log_filtered <- lmer(
 )
 ```
 
-```{r}
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
 tab_model(
   mz_filtered,
   show.re.var = TRUE,
@@ -355,10 +356,13 @@ tab_model(
 
 ```
 
-### Table: Linear Mixed Model for EstTravelTime
+### 
 
-![](model.png){width=90%}
+#### Table 2
 
+![](model.png){width="90%"}
+
+#### Figure 6
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 # Extract residuals and fitted values
@@ -375,6 +379,8 @@ ggplot(data.frame(fitted = fitted_filtered, residuals = resid_filtered),
   theme_minimal()
 ```
 
+#### Figure 7
+
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 # QQ plot
 ggplot(data.frame(residuals = resid_filtered), aes(sample = residuals)) +
@@ -384,6 +390,8 @@ ggplot(data.frame(residuals = resid_filtered), aes(sample = residuals)) +
        x = "Theoretical Quantiles", y = "Sample Residuals") +
   theme_minimal()
 ```
+
+#### Figure 8
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 m_varident <- lme(
@@ -407,6 +415,8 @@ ggplot(data.frame(fitted = fitted_vi, residuals = resid_vi),
 
 ```
 
+#### Figure 9
+
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 # QQ plot
 ggplot(data.frame(residuals = resid_vi), aes(sample = residuals)) +
@@ -417,6 +427,8 @@ ggplot(data.frame(residuals = resid_vi), aes(sample = residuals)) +
   theme_minimal()
 ```
 
+#### Figure 10
+
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 # Histogram
 ggplot(data.frame(residuals = resid_vi), aes(x = residuals)) +
@@ -425,4 +437,3 @@ ggplot(data.frame(residuals = resid_vi), aes(x = residuals)) +
        x = "Pearson Residuals", y = "Count") +
   theme_minimal()
 ```
-
