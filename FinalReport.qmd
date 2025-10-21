@@ -48,17 +48,7 @@ For model assumptions, we first let residual error follow a normal distribution,
 
 **Table 2** is our coefficient summary for the better fit model. We can see that the estimated coefficients for all four Scenario indicators have p values that are greater than 0.05 and their 95% confidence intervals all cross zero which indicates that holding Distance and Rush Hour constant, there is no statistically significant evidence that response time differs across the alternative allocation scenarios compared to the baseline configuration of S0.
 
-### Question 1
-
-If relocate to north: faster response time – near north vs far north?
-
-### Question 2
-
-If relocate to north: faster response time – south vs central?
-
-### Question 3
-
-Overall: does relocation to north yield significant benefit?
+So from our analysis we have found that 1) there is not statistically significant difference in response time between the near north and far north stations and both scenarios perform similarly once we adjust for distance and rush hour, 2) there is no statistically significant difference in response time when we move the station north from the central or south stations and 3) relocating to north station does not yield any significant benefits as the relocation scenarios as a whole do not yield statistically significant improvement in response time.
 
 ## 5 Conclusion and Future Work
 
@@ -67,6 +57,8 @@ Our analysis showed that relocation to far north resulted in faster response tim
 Some limitations is that our model assumes traffic level to be constant throughout non-vs rush hour. We also are dealing with data that has error introduced by data randomization from the HIPAA protection so there is some marginal error in the distance calculation that stems from this. We are also limited from the smaller sample size and also from the best guess Google API which assumes average conditions.
 
 In the future we can try adding time of day for a random effects which could provide a deeper insight into temporal variation in the response times. We can model this using a continous smooth spline approach using mgcr or poly to capture the nonlinear daily trends without overfitting. We can also try a Bayesian approach to improve interpretability, particularly in regions with fewer calls. Through partial pooling and uncertainty propagation, the use of this approach would allow information sharing across districts while accounting for data sparsity. Finally, a hierarchical modeling approach could be implemented to account for further subdivisions in call type and urgency and this would allow our model to distinguish between the emergency severity levels and incorporate medical criteria for the urgency of each call which could change how we allocate the ambulances across the systems.
+
+{{< pagebreak >}}
 
 ## 6 Appendix
 
@@ -228,6 +220,8 @@ x<- x %>%
   select(-disp_hour, -disp_min)
 ```
 
+{{< pagebreak >}}
+
 #### Figure 2
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -249,6 +243,8 @@ x %>%
   theme_minimal()
 ```
 
+{{< pagebreak >}}
+
 #### Figure 3
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -265,6 +261,8 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
        y = "Count") +
   theme_minimal()
 ```
+
+{{< pagebreak >}}
 
 #### Figure 4
 
@@ -292,6 +290,8 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
   theme_minimal()
 ```
 
+{{< pagebreak >}}
+
 #### Figure 5
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -315,6 +315,8 @@ ggplot(coefs, aes(x = term, y = estimate, color = Significant)) +
        title = "Fixed effects (significant ones highlighted)") +
   theme_minimal()
 ```
+
+{{< pagebreak >}}
 
 ## Modeling
 
@@ -358,9 +360,13 @@ tab_model(
 
 ### 
 
+{{< pagebreak >}}
+
 #### Table 2
 
 ![](model.png){width="90%"}
+
+{{< pagebreak >}}
 
 #### Figure 6
 
@@ -379,6 +385,8 @@ ggplot(data.frame(fitted = fitted_filtered, residuals = resid_filtered),
   theme_minimal()
 ```
 
+{{< pagebreak >}}
+
 #### Figure 7
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -390,6 +398,8 @@ ggplot(data.frame(residuals = resid_filtered), aes(sample = residuals)) +
        x = "Theoretical Quantiles", y = "Sample Residuals") +
   theme_minimal()
 ```
+
+{{< pagebreak >}}
 
 #### Figure 8
 
@@ -415,6 +425,8 @@ ggplot(data.frame(fitted = fitted_vi, residuals = resid_vi),
 
 ```
 
+{{< pagebreak >}}
+
 #### Figure 9
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -426,6 +438,8 @@ ggplot(data.frame(residuals = resid_vi), aes(sample = residuals)) +
        x = "Theoretical Quantiles", y = "Sample Residuals") +
   theme_minimal()
 ```
+
+{{< pagebreak >}}
 
 #### Figure 10
 
