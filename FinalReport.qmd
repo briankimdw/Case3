@@ -256,7 +256,7 @@ conflicts <- x %>%
 
 ggplot(conflicts, aes(x = conflict_minutes)) +
   geom_histogram(binwidth = 5, fill = "steelblue", color = "white") +
-  labs(title = "Conflict Duration Distribution",
+  labs(title = "Conflict Duration Distribution for North and Central Station",
        x = "Conflict Duration (minutes)",
        y = "Count") +
   theme_minimal()
@@ -267,7 +267,21 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
 #### Figure 4
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
+yo <- x |>
+  filter(REF.GRID == "3 South")
 
+df <- yo %>%
+  mutate(
+    DT.DISP = ymd_hms(DT.DISP),
+    DT.ENROUTE = ymd_hms(DT.ENROUTE),
+    DT.AVAILABLE = ymd_hms(DT.AVAILABLE)
+  )
+
+conflicts <- df %>%
+  filter(DT.AVAILABLE > DT.DISP) %>%
+  mutate(
+    conflict_minutes = as.numeric(difftime(DT.AVAILABLE, DT.DISP, units = "mins"))
+  )
 # Assume conflicts already has DT.DISP and DT.AVAILABLE
 intervals <- IRanges(start = as.numeric(conflicts$DT.DISP),
                      end = as.numeric(conflicts$DT.AVAILABLE))
@@ -284,7 +298,7 @@ conflicts <- conflicts %>%
 
 ggplot(conflicts, aes(x = conflict_minutes)) +
   geom_histogram(binwidth = 5, fill = "steelblue", color = "white") +
-  labs(title = "Conflict Duration Distribution",
+  labs(title = "Conflict Duration Distribution for South Station",
        x = "Conflict Duration (minutes)",
        y = "Count") +
   theme_minimal()
