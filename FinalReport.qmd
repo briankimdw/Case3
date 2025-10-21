@@ -1,5 +1,6 @@
 ---
 title: "Analysis of Vance County EMS Ambulance Distribution"
+author: Eunice Lee, Sonya Eason, Brian Kim
 format: pdf
 editor: visual
 ---
@@ -22,7 +23,7 @@ We then examine the occurrence of "load conflicts" in each region, defined as st
 
 As a foundational assumption to follow for all scenarios, we set a “dispatch rule” on how ambulances will be dispatched depending on location of the call. For scenario 0 (current baseline) where 3 ambulances are in Central and 1 is in South station, we assume that all North and Central calls are taken by the Central station and all South calls are taken by the South station ambulances. For scenarios 1 and 2, still with 3 ambulances in the Central station but with 1 South ambulance relocated to the North (Near or Far, respectively), we assume that North calls are taken only by the North station and Central or South calls are only taken by the Central station ambulances. For scenarios 3 and 4, with 1 South ambulance, 2 Central ambulances, and 1 Central moved to the North (Near or Far, respectively), we assume all calls are taken by an ambulance from its same-region station. However, we make an exception to these rules in the case of critical stress events at an assigned station, as it would be unethical to "gatekeep" ambulances from dispatching to a different region when they are available. In such cases of 3+ load conflicts, we make the available ambulance from the next closest station to be dispatched to take the call.
 
-Under the assumption of a hierarchical approach where we condition on the calls over the total change in time, we fit a couple of models. The covariates are \_\_\_\_\_\_\_. They are both linear mixed models where utilize a random effect for a call since there is within group variation for each call. One takes into account heteroscedasticity concern and varies potential errors by longitude and latitude. (EXPLAIN RESIDUAL PLOT ETC HERE)
+Under the assumption of a hierarchical approach where we condition on the calls over the total change in time, we fit a couple of models. The covariates are \_\_\_\_\_\_\_. They are both linear mixed models where utilize a random effect for a call since there is within group variation for each call. One takes into account heteroscedasticity concern and varies potential errors by longitude and latitude. To access these model assumptions we examined the residual plots for both candidate mixed models. **Figure 6** shows the model with constant error variance has residuals that are centered around 0 with no strong curvature so the assumption of linearity is reasonable here even though there are some spread, the pattern is not indicative of systematic heteroscedasticity. **Figure 8** is the one where we allowed the error variance to differ by scenario and it shows no meaningful improvement in the residual spread or overall structure. Since the more complex variance structure did not really reduce the heteroscedastic pattern, the simpler model without additional error variation is preferred.
 
 ## 4 Results
 
