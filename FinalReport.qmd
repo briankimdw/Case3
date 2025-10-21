@@ -219,8 +219,6 @@ x<- x %>%
   select(-disp_hour, -disp_min)
 ```
 
-{{< pagebreak >}}
-
 #### Figure 2
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -242,8 +240,6 @@ x %>%
   theme_minimal()
 ```
 
-{{< pagebreak >}}
-
 #### Figure 3
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -260,8 +256,6 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
        y = "Count") +
   theme_minimal()
 ```
-
-{{< pagebreak >}}
 
 #### Figure 4
 
@@ -303,8 +297,6 @@ ggplot(conflicts, aes(x = conflict_minutes)) +
   theme_minimal()
 ```
 
-{{< pagebreak >}}
-
 #### Figure 5
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -328,8 +320,6 @@ ggplot(coefs, aes(x = term, y = estimate, color = Significant)) +
        title = "Fixed effects (significant ones highlighted)") +
   theme_minimal()
 ```
-
-{{< pagebreak >}}
 
 ## Modeling
 
@@ -371,15 +361,9 @@ tab_model(
 
 ```
 
-### 
-
-{{< pagebreak >}}
-
 #### Table 2
 
 ![](model.png){width="90%"}
-
-{{< pagebreak >}}
 
 #### Figure 6
 
@@ -398,8 +382,6 @@ ggplot(data.frame(fitted = fitted_filtered, residuals = resid_filtered),
   theme_minimal()
 ```
 
-{{< pagebreak >}}
-
 #### Figure 7
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -411,8 +393,6 @@ ggplot(data.frame(residuals = resid_filtered), aes(sample = residuals)) +
        x = "Theoretical Quantiles", y = "Sample Residuals") +
   theme_minimal()
 ```
-
-{{< pagebreak >}}
 
 #### Figure 8
 
@@ -438,8 +418,6 @@ ggplot(data.frame(fitted = fitted_vi, residuals = resid_vi),
 
 ```
 
-{{< pagebreak >}}
-
 #### Figure 9
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -451,8 +429,6 @@ ggplot(data.frame(residuals = resid_vi), aes(sample = residuals)) +
        x = "Theoretical Quantiles", y = "Sample Residuals") +
   theme_minimal()
 ```
-
-{{< pagebreak >}}
 
 #### Figure 10
 
